@@ -1,0 +1,170 @@
+import React, { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { motion } from "framer-motion";
+
+// 🔥 FIREBASE IMPORTS
+import { initializeApp } from "firebase/app";
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+} from "firebase/auth";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  getDocs,
+} from "firebase/firestore";
+
+// 🔥 YOUR FIREBASE CONFIG (replace with your real config)
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_BUCKET",
+  messagingSenderId: "YOUR_ID",
+  appId: "YOUR_APP_ID",
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+export default function InspireHubPro() {
+  const [posts, setPosts] = useState([]);
+  const [newPost, setNewPost] = useState({ title: "", category: "", description: "" });
+  const [user, setUser] = useState(null);
+  const [loginData, setLoginData] = useState({ email: "", password: "" });
+
+  // 🔐 AUTH STATE
+  useEffect(() => {
+    onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+  }, []);
+
+  // 📦 LOAD POSTS FROM FIRESTORE
+  const loadPosts = async () => {
+    const querySnapshot = await getDocs(collection(db, "posts"));
+    const data = querySnapshot.docs.map((doc) => doc.data());
+    setPosts(data);
+  };
+
+  useEffect(() => {
+    loadPosts();
+  }, []);
+
+  // 🔑 LOGIN
+  const login = async () => {
+    try {
+      await signInWithEmailAndPassword(auth, loginData.email, loginData.password);
+    } catch (err) {
+      alert("Login failed");
+    }
+  };
+
+  // 🚪 LOGOUT
+  const logout = async () => {
+    await signOut(auth);
+  };
+
+  // ✍️ ADD POST
+  const addPost = async () => {
+    if (!newPost.title) return;
+    await addDoc(collection(db, "posts"), newPost);
+    setNewPost({ title: "", category: "", description: "" });
+    loadPosts();
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      {/* HEADER */}
+      <header className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-bold">InspireHub Pro</h1>
+          <p className="text-gray-500 text-sm">Firebase Powered Blog</p>
+        </div>
+
+        {user ? (
+          <Button onClick={logout}>Logout</Button>
+        ) : null}
+      </header>
+
+      {/* LOGIN */}
+      {!user && (
+        <div className="bg-white p-6 rounded-2xl shadow mb-8 max-w-md mx-auto">
+          <h2 className="text-xl font-semibold mb-4">Admin Login</h2>
+          <div className="grid gap-3">
+            <Input
+              placeholder="Email"
+              value={loginData.email}
+              onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+            />
+            <Input
+              type="password"
+              placeholder="Password"
+              value={loginData.password}
+              onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+            />
+            <Button onClick={login}>Login</Button>
+          </div>
+        </div>
+      )}
+
+      {/* ADMIN PANEL */}
+      {user && (
+        <div className="bg-white p-5 rounded-2xl shadow mb-8">
+          <h2 className="text-xl font-semibold mb-4">Create Post</h2>
+          <div className="grid gap-3">
+            <Input
+              placeholder="Title"
+              value={newPost.title}
+              onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
+            />
+            <Input
+              placeholder="Category"
+              value={newPost.category}
+              onChange={(e) => setNewPost({ ...newPost, category: e.target.value })}
+            />
+            <Input
+              placeholder="Description"
+              value={newPost.description}
+              onChange={(e) => setNewPost({ ...newPost, description: e.target.value })}
+            />
+            <Button onClick={addPost}>Publish</Button>
+          </div>
+        </div>
+      )}
+
+      {/* POSTS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {posts.map((post, index) => (
+          <motion.div key={index} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+            <Card className="rounded-2xl shadow hover:shadow-xl transition">
+              <CardContent className="p-5">
+                <span className="text-sm text-blue-500">{post.category}</span>
+                <h2 className="text-xl font-semibold mt-2">{post.title}</h2>
+                <p className="text-gray-600 mt-2">{post.description}</p>
+
+                <div className="mt-4 p-3 bg-gray-100 rounded text-xs text-center">
+                  AdSense Space
+                </div>
+
+                <Button className="mt-4 w-full">Read More</Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* FOOTER */}
+      <footer className="text-center mt-10 text-gray-400 text-sm">
+        © 2026 InspireHub Pro | Firebase Backend Ready
+      </footer>
+    </div>
+  );
+}
+s
